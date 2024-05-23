@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 type DynamoDBClient struct {
@@ -20,42 +21,19 @@ func NewDynamoDBClient() DynamoDBClient {
 
 	return DynamoDBClient{
 		databaseStore: db,
-		tableName:     "users",
+		tableName:     "StocksPrice",
 	}
 }
 
-func (db DynamoDBClient) IsUserExists(username string) (bool, error) {
-	isUserExists, err := db.databaseStore.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(db.tableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"username": {
-				S: aws.String(username),
-			},
-		},
-	})
-
+func (db DynamoDBClient) AddStocksPrice(stocksPrice types.StocksPrice) error {
+	data, err := dynamodbattribute.MarshalMap(stocksPrice)
 	if err != nil {
-		return true, err
+		return fmt.Errorf(err.Error())
 	}
 
-	if isUserExists.Item == nil {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (db DynamoDBClient) InsertUser(user types.RegisterUser) error {
 	item := &dynamodb.PutItemInput{
 		TableName: aws.String(db.tableName),
-		Item: map[string]*dynamodb.AttributeValue{
-			"username": {
-				S: aws.String(user.Username),
-			},
-			"password": {
-				S: aws.String(user.Password),
-			},
-		},
+		Item:      data,
 	}
 
 	if _, err := db.databaseStore.PutItem(item); err != nil {

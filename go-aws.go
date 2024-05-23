@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
@@ -21,21 +23,28 @@ func NewGoAwsStack(scope constructs.Construct, id string, props *GoAwsStackProps
 
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-	table := awsdynamodb.NewTable(stack, jsii.String("myUsersTable"), &awsdynamodb.TableProps{
+	table := awsdynamodb.NewTable(stack, jsii.String("myStocksPriceTable"), &awsdynamodb.TableProps{
 		PartitionKey: &awsdynamodb.Attribute{
-			Name: jsii.String("username"),
+			Name: jsii.String("timestamp"),
 			Type: awsdynamodb.AttributeType_STRING,
 		},
-		TableName: jsii.String("users"),
+		TableName: jsii.String("StocksPrice"),
 	})
 
-	myLambdaFunction := awslambda.NewFunction(stack, jsii.String("myLambdaFunction"), &awslambda.FunctionProps{
+	lambdaFunction := awslambda.NewFunction(stack, jsii.String("myLambdaFunction"), &awslambda.FunctionProps{
 		Runtime: awslambda.Runtime_PROVIDED_AL2023(),
 		Code:    awslambda.S3Code_FromAsset(jsii.String("lambda/function.zip"), nil),
 		Handler: jsii.String("main"),
 	})
 
-	table.GrantReadWriteData(myLambdaFunction)
+	awsevents.NewRule(stack, jsii.String("myCronJob"), &awsevents.RuleProps{
+		Schedule: awsevents.Schedule_Cron(&awsevents.CronOptions{
+			Minute: jsii.String("*/1"),
+		}),
+		Targets: &[]awsevents.IRuleTarget{awseventstargets.NewLambdaFunction(lambdaFunction, nil)},
+	})
+
+	table.GrantReadWriteData(lambdaFunction)
 
 	return stack
 }

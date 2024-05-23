@@ -1,19 +1,19 @@
 package app
 
 import (
-	"lambda/api"
+	"lambda/cronJob"
 	"lambda/database"
 )
 
 type App struct {
-	ApiHandler api.ApiHandler
+	CronJobHandler cronJob.CronJobHandler
 }
 
 func NewApp() App {
 	db := database.NewDynamoDBClient()
-	apiHandler := api.NewApiHandler(db)
+	cronJobHandler := cronJob.NewCronJobHandler(db)
 
 	return App{
-		ApiHandler: apiHandler,
+		CronJobHandler: cronJobHandler,
 	}
 }
